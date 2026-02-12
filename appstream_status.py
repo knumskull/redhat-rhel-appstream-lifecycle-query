@@ -1,3 +1,8 @@
+# ---------------------------------------------------------------------------
+# This code was created with the help of AI (ChatGPT, Cursor/Claude).
+# Maintained by Steffen Froemer.
+# ---------------------------------------------------------------------------
+
 import argparse
 import sqlite3
 import json

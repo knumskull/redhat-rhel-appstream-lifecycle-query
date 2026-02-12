@@ -322,5 +322,5 @@ This project is unofficial and not affiliated with Red Hat. It scrapes publicly 
 
 ## Author
 
-Generated with help from ChatGPT.
+This project was created with the help of AI (ChatGPT, Cursor/Claude).
 Maintained by Steffen Froemer.

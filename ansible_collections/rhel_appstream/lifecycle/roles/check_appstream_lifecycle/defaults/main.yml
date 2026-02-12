@@ -1,4 +1,6 @@
 ---
+# This file was created with the help of AI (ChatGPT, Cursor/Claude).
+#
 # Path on the target host where lifecycle data and script will be stored
 appstream_check_dir: /opt/appstream-check
 

@@ -3,6 +3,7 @@
 
 # Copyright: (c) 2026, Steffen Froemer
 # MIT License
+# This code was created with the help of AI (ChatGPT, Cursor/Claude).
 
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type

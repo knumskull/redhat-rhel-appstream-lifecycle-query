@@ -1,4 +1,6 @@
 ---
+# This file was created with the help of AI (ChatGPT, Cursor/Claude).
+
 - name: Ensure python3-dateutil is installed
   ansible.builtin.dnf:
     name: python3-dateutil
