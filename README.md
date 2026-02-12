@@ -1,13 +1,14 @@
 # RHEL AppStream Lifecycle Reporter
 
-A command-line Python tool to extract, query, and report the lifecycle (support/retirement) status of Red Hat Enterprise Linux (RHEL) Application Streams for RHEL 8 and RHEL 9.
+A command-line Python tool and Ansible collection to extract, query, and report the lifecycle (support/retirement) status of Red Hat Enterprise Linux (RHEL) Application Streams for RHEL 8 and RHEL 9.
 
 ## Features
 
 - Extracts lifecycle data from Red Hat's official lifecycle page.
 - Stores structured data as **SQLite database**, **JSON file**, or **both**.
-- JSON export enables portable, offline validation on remote RHEL systems (e.g. via Ansible).
+- JSON export enables portable, offline validation on remote RHEL systems.
 - **`--check-enabled` mode** — detects locally enabled AppStream modules via `dnf` and cross-references them against lifecycle data to flag unsupported modules.
+- **Ansible collection** (`rhel_appstream.lifecycle`) — a native Ansible module and role to check AppStream lifecycle status across a fleet of RHEL systems.
 - Automatic RHEL version detection (`/etc/redhat-release`) to query only relevant lifecycle tables.
 - Queries lifecycle information with support for:
   - Custom reference date (`--date`)
@@ -32,7 +33,7 @@ pip install -r requirements.txt
 > **Note:** On target RHEL systems that only consume the JSON file, only `python-dateutil` is required.
 > `requests` and `beautifulsoup4` are only needed for fetching/scraping on the central host.
 
-## Usage
+## Standalone Usage
 
 ### 1. Fetch lifecycle data
 
@@ -64,7 +65,9 @@ python fetch_rhel_appstreams.py --format both
 python fetch_rhel_appstreams.py --format both --db custom.db --json-file custom.json
 ```
 
-### 2. Query lifecycle status
+### 2. Query lifecycle status (common list)
+
+Shows the full lifecycle report for **all** AppStream modules across all tables — the reference list.
 
 ```bash
 python appstream_status.py [options]
@@ -87,7 +90,7 @@ python appstream_status.py [options]
 #### Examples
 
 ```bash
-# Auto-detect data source, show all details
+# Show the full lifecycle report (common list)
 python appstream_status.py --show-supported --show-expired
 
 # Explicit SQLite source
@@ -166,72 +169,122 @@ The exported JSON file follows this structure:
 
 Each top-level key is a lifecycle table (`rhel8_main`, `rhel8_full`, `rhel9_rolling`, etc.) containing its column definitions and row data as a list of dictionaries.
 
-## Ansible Integration
+## Ansible Collection
 
-The JSON export combined with `--check-enabled` makes it straightforward to validate AppStream lifecycle status across a fleet of RHEL systems — no SQLite dependency needed on the targets.
+The repository includes a full Ansible collection at `ansible_collections/rhel_appstream/lifecycle/` with a **custom module** and **role** for checking AppStream lifecycle status across a fleet of RHEL systems.
 
-### Workflow
+### Install the collection
 
-1. **Central host** — fetch and export the lifecycle data as JSON:
+From the repository:
 
-   ```bash
-   python fetch_rhel_appstreams.py --format json
-   ```
+```bash
+cd ansible_collections/rhel_appstream/lifecycle
+ansible-galaxy collection build
+ansible-galaxy collection install rhel_appstream-lifecycle-1.0.0.tar.gz
+```
 
-2. **Distribute** — copy the JSON file and query script to target hosts:
+Or install directly from the git repository:
 
-   ```yaml
-   - name: Ensure target directory exists
-     ansible.builtin.file:
-       path: /opt/appstream-check
-       state: directory
-       mode: "0755"
+```bash
+ansible-galaxy collection install git+https://github.com/sfroemer/redhat-rhel-appstream-lifecycle-query.git#/ansible_collections/rhel_appstream/lifecycle
+```
 
-   - name: Copy AppStream lifecycle data
-     ansible.builtin.copy:
-       src: rhel_app_streams.json
-       dest: /opt/appstream-check/rhel_app_streams.json
+### Using the role
 
-   - name: Copy query script
-     ansible.builtin.copy:
-       src: appstream_status.py
-       dest: /opt/appstream-check/appstream_status.py
-       mode: "0755"
-   ```
+The role `rhel_appstream.lifecycle.check_appstream_lifecycle` handles everything: installs dependencies, distributes the JSON lifecycle data, runs the check, and reports results.
 
-3. **Check enabled modules** — run the lifecycle check on each target:
+**Prerequisites:** Generate the JSON lifecycle data on your Ansible controller first:
 
-   ```yaml
-   - name: Ensure python3-dateutil is installed
-     ansible.builtin.dnf:
-       name: python3-dateutil
-       state: present
+```bash
+python fetch_rhel_appstreams.py --format json
+```
 
-   - name: Check for unsupported enabled AppStream modules
-     ansible.builtin.command:
-       cmd: >
-         python3 /opt/appstream-check/appstream_status.py
-         --json /opt/appstream-check/rhel_app_streams.json
-         --check-enabled
-     register: appstream_result
-     failed_when: false
-     changed_when: false
+**Playbook example:**
 
-   - name: Display lifecycle check results
-     ansible.builtin.debug:
-       var: appstream_result.stdout_lines
+```yaml
+---
+- name: Check RHEL AppStream lifecycle status
+  hosts: rhel_servers
+  become: true
 
-   - name: Fail if unsupported modules are enabled
-     ansible.builtin.fail:
-       msg: "Unsupported AppStream modules detected on {{ inventory_hostname }}"
-     when: appstream_result.rc != 0
-   ```
+  roles:
+    - role: rhel_appstream.lifecycle.check_appstream_lifecycle
+      vars:
+        appstream_lifecycle_data_src: rhel_app_streams.json
+        appstream_fail_on_expired: true
+```
 
-> **Target host requirements:** Python 3.8+ and `python-dateutil` (`dnf install python3-dateutil`).
+#### Role variables
 
-The `--check-enabled` flag exits with code `1` when unsupported modules are found, making it easy to use `failed_when` / `when: appstream_result.rc != 0` in Ansible to flag or fail hosts with outdated AppStreams.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `appstream_check_dir` | `/opt/appstream-check` | Target directory for lifecycle data |
+| `appstream_lifecycle_data_src` | `rhel_app_streams.json` | Path to JSON file on the controller |
+| `appstream_fail_on_expired` | `true` | Fail the play when unsupported modules are found |
+| `appstream_reference_date` | *(today)* | Reference date in `YYYY-MM-DD` format |
+| `appstream_rhel_version` | *(auto-detected)* | Override RHEL major version (8 or 9) |
 
-## Output Example
+### Using the module directly
+
+For more control, use the `rhel_appstream.lifecycle.check_appstream_lifecycle` module in your own playbook:
+
+```yaml
+---
+- name: Check AppStream lifecycle
+  hosts: rhel_servers
+  become: true
+
+  tasks:
+    - name: Ensure python3-dateutil is installed
+      ansible.builtin.dnf:
+        name: python3-dateutil
+        state: present
+
+    - name: Copy lifecycle data to target
+      ansible.builtin.copy:
+        src: rhel_app_streams.json
+        dest: /tmp/rhel_app_streams.json
+
+    - name: Check enabled AppStream modules
+      rhel_appstream.lifecycle.check_appstream_lifecycle:
+        lifecycle_data: /tmp/rhel_app_streams.json
+        fail_on_expired: false
+      register: result
+
+    - name: Show summary
+      ansible.builtin.debug:
+        msg: "{{ result.summary }}"
+
+    - name: List unsupported modules
+      ansible.builtin.debug:
+        msg: "{{ item.module }} — retired {{ item.retirement_date }} ({{ item.days_ago }} days ago)"
+      loop: "{{ result.expired }}"
+      loop_control:
+        label: "{{ item.module }}"
+      when: result.expired | length > 0
+```
+
+#### Module parameters
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `lifecycle_data` | yes | — | Path to JSON lifecycle data on the target host |
+| `reference_date` | no | *(today)* | Reference date (`YYYY-MM-DD`) |
+| `fail_on_expired` | no | `true` | Fail when unsupported modules are found |
+| `rhel_version` | no | *(auto)* | Override RHEL major version |
+
+#### Module return values
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `enabled_modules` | list | All enabled AppStream modules found |
+| `expired` | list[dict] | Modules past retirement (`module`, `retirement_date`, `days_ago`, `table`) |
+| `supported` | list[dict] | Modules within lifecycle (`module`, `retirement_date`, `days_left`, `table`) |
+| `unknown` | list | Enabled modules not found in lifecycle data |
+| `rhel_version` | int | Detected or overridden RHEL version |
+| `summary` | str | Human-readable summary |
+
+## Output Example (standalone)
 
 ```
 📅 Reference date: 2025-05-08
@@ -247,11 +300,15 @@ The `--check-enabled` flag exits with code `1` when unsupported modules are foun
 
 ## Files
 
-- `fetch_rhel_appstreams.py` — Scrapes the Red Hat lifecycle page and exports data as SQLite, JSON, or both.
-- `appstream_status.py` — Queries lifecycle data from SQLite or JSON, reports status, and optionally checks locally enabled modules.
-- `requirements.txt` — Python dependencies.
-- `README.md` — Documentation.
-- `LICENSE` — MIT License.
+| Path | Description |
+|------|-------------|
+| `fetch_rhel_appstreams.py` | Scrapes the Red Hat lifecycle page and exports data as SQLite, JSON, or both |
+| `appstream_status.py` | Queries lifecycle data, reports status, and optionally checks locally enabled modules |
+| `requirements.txt` | Python dependencies |
+| `ansible_collections/` | Ansible collection (`rhel_appstream.lifecycle`) |
+| `ansible_collections/.../plugins/modules/check_appstream_lifecycle.py` | Custom Ansible module |
+| `ansible_collections/.../roles/check_appstream_lifecycle/` | Ansible role wrapping the module |
+| `LICENSE` | MIT License |
 
 ---
 

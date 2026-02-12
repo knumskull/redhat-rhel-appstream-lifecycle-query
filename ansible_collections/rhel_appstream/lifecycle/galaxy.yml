@@ -1,0 +1,23 @@
+---
+namespace: rhel_appstream
+name: lifecycle
+version: 1.0.0
+readme: README.md
+authors:
+  - Steffen Froemer
+description: >
+  Check RHEL AppStream module lifecycle status on live systems.
+  Cross-references locally enabled dnf modules against Red Hat's
+  official AppStream lifecycle data to identify unsupported modules.
+license_file: ../../../LICENSE
+tags:
+  - rhel
+  - appstream
+  - lifecycle
+  - security
+  - compliance
+repository: https://github.com/sfroemer/redhat-rhel-appstream-lifecycle-query
+build_ignore:
+  - "*.db"
+  - "*.pyc"
+  - "__pycache__"

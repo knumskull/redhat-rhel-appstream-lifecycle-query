@@ -1,0 +1,16 @@
+---
+# Path on the target host where lifecycle data and script will be stored
+appstream_check_dir: /opt/appstream-check
+
+# Path to the JSON lifecycle data file on the Ansible controller
+# Generate with: python fetch_rhel_appstreams.py --format json
+appstream_lifecycle_data_src: rhel_app_streams.json
+
+# Reference date for lifecycle check (YYYY-MM-DD, default: today)
+# appstream_reference_date: "2025-12-31"
+
+# Whether to fail the play when unsupported modules are found
+appstream_fail_on_expired: true
+
+# Override RHEL version (auto-detected if not set)
+# appstream_rhel_version: 9

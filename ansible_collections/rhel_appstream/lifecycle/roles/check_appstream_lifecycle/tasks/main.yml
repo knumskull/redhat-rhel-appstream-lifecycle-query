@@ -1,0 +1,55 @@
+---
+- name: Ensure python3-dateutil is installed
+  ansible.builtin.dnf:
+    name: python3-dateutil
+    state: present
+
+- name: Ensure target directory exists
+  ansible.builtin.file:
+    path: "{{ appstream_check_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy lifecycle data to target
+  ansible.builtin.copy:
+    src: "{{ appstream_lifecycle_data_src }}"
+    dest: "{{ appstream_check_dir }}/rhel_app_streams.json"
+    mode: "0644"
+
+- name: Check enabled AppStream modules against lifecycle data
+  rhel_appstream.lifecycle.check_appstream_lifecycle:
+    lifecycle_data: "{{ appstream_check_dir }}/rhel_app_streams.json"
+    reference_date: "{{ appstream_reference_date | default(omit) }}"
+    fail_on_expired: "{{ appstream_fail_on_expired }}"
+    rhel_version: "{{ appstream_rhel_version | default(omit) }}"
+  register: appstream_lifecycle_result
+
+- name: Display lifecycle check summary
+  ansible.builtin.debug:
+    msg: "{{ appstream_lifecycle_result.summary }}"
+
+- name: Display unsupported modules (if any)
+  ansible.builtin.debug:
+    msg: >-
+      UNSUPPORTED: {{ item.module }} — retired on {{ item.retirement_date }}
+      ({{ item.days_ago }} days ago) [{{ item.table }}]
+  loop: "{{ appstream_lifecycle_result.expired }}"
+  loop_control:
+    label: "{{ item.module }}"
+  when: appstream_lifecycle_result.expired | length > 0
+
+- name: Display supported modules
+  ansible.builtin.debug:
+    msg: >-
+      OK: {{ item.module }} — retires on {{ item.retirement_date }}
+      ({{ item.days_left }} days left) [{{ item.table }}]
+  loop: "{{ appstream_lifecycle_result.supported }}"
+  loop_control:
+    label: "{{ item.module }}"
+  when: appstream_lifecycle_result.supported | length > 0
+
+- name: Display unknown modules (if any)
+  ansible.builtin.debug:
+    msg: "UNKNOWN: {{ item }} — not found in lifecycle data"
+  loop: "{{ appstream_lifecycle_result.unknown }}"
+  when: appstream_lifecycle_result.unknown | length > 0
