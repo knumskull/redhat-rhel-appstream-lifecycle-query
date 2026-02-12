@@ -25,6 +25,10 @@ TARGET_SECTIONS = {
     "RHEL 9 Full Life Application Streams Release Life Cycle": "rhel9_full",
     "RHEL 9 Rolling Application Streams Release Life Cycle": "rhel9_rolling",
     "RHEL 9 Dependent Application Streams Release Life Cycle": "rhel9_dependent",
+    "RHEL 10 Application Streams Release Life Cycle": "rhel10_main",
+    "RHEL 10 Full Life Application Streams Release Life Cycle": "rhel10_full",
+    "RHEL 10 Rolling Application Streams Release Life Cycle": "rhel10_rolling",
+    "RHEL 10 Dependent Application Streams Release Life Cycle": "rhel10_dependent",
 }
 
 DB_NAME = "rhel_app_streams.db"

@@ -1,6 +1,6 @@
 # RHEL AppStream Lifecycle Reporter
 
-A command-line Python tool and Ansible collection to extract, query, and report the lifecycle (support/retirement) status of Red Hat Enterprise Linux (RHEL) Application Streams for RHEL 8 and RHEL 9.
+A command-line Python tool and Ansible collection to extract, query, and report the lifecycle (support/retirement) status of Red Hat Enterprise Linux (RHEL) Application Streams for RHEL 8, RHEL 9, and RHEL 10.
 
 ## Features
 
@@ -167,7 +167,7 @@ The exported JSON file follows this structure:
 }
 ```
 
-Each top-level key is a lifecycle table (`rhel8_main`, `rhel8_full`, `rhel9_rolling`, etc.) containing its column definitions and row data as a list of dictionaries.
+Each top-level key is a lifecycle table (`rhel8_main`, `rhel8_full`, `rhel9_rolling`, `rhel10_main`, etc.) containing its column definitions and row data as a list of dictionaries.
 
 ## Ansible Collection
 
@@ -222,7 +222,7 @@ python fetch_rhel_appstreams.py --format json
 | `appstream_lifecycle_data_src` | `rhel_app_streams.json` | Path to JSON file on the controller |
 | `appstream_fail_on_expired` | `true` | Fail the play when unsupported modules are found |
 | `appstream_reference_date` | *(today)* | Reference date in `YYYY-MM-DD` format |
-| `appstream_rhel_version` | *(auto-detected)* | Override RHEL major version (8 or 9) |
+| `appstream_rhel_version` | *(auto-detected)* | Override RHEL major version (8, 9, or 10) |
 
 ### Using the module directly
 

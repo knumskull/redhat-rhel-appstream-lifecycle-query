@@ -40,7 +40,7 @@ options:
     default: true
   rhel_version:
     description:
-      - Override the RHEL major version (8 or 9).
+      - Override the RHEL major version (8, 9, or 10).
       - Auto-detected from C(/etc/redhat-release) if not specified.
     type: int
     required: false
@@ -126,6 +126,7 @@ from ansible.module_utils.basic import AnsibleModule
 TABLES = [
     "rhel8_main", "rhel8_full", "rhel8_rolling", "rhel8_dependent",
     "rhel9_main", "rhel9_full", "rhel9_rolling", "rhel9_dependent",
+    "rhel10_main", "rhel10_full", "rhel10_rolling", "rhel10_dependent",
 ]
 
 RETIRE_COLS = ["Retirement Date", "End of Life", "End Date"]

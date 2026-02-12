@@ -15,7 +15,8 @@ from pathlib import Path
 # Tables to check
 TABLES = [
     "rhel8_main", "rhel8_full", "rhel8_rolling", "rhel8_dependent",
-    "rhel9_main", "rhel9_full", "rhel9_rolling", "rhel9_dependent"
+    "rhel9_main", "rhel9_full", "rhel9_rolling", "rhel9_dependent",
+    "rhel10_main", "rhel10_full", "rhel10_rolling", "rhel10_dependent",
 ]
 
 RETIRE_COLS = ["Retirement Date", "End of Life", "End Date"]
